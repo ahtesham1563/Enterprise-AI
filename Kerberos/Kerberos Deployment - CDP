@@ -1,0 +1,171 @@
+             Kerberos Deployment
+##############################################
+          Kerberos Installation CDP
+##############################################
+
+## Install kerberos KDC and Admin server
+
+## On Cm host install kdc and admin server
+
+
+$ sudo apt-get install -y rng-tools
+
+$ sudo apt install krb5-kdc krb5-admin-server
+
+
+For realm give : HADOOP.COM
+Kerberos server for your realm : <private-dns-of-cm>
+(realm name must be in CAPITAL)
+
+
+##initialise the realm (starting kerberos)##
+$ sudo krb5_newrealm
+
+##give a strong password for KDC database###
+
+
+## Check the krb5.conf## (only for viewing)
+$ nano /etc/krb5.conf
+[only three (3) files are configured in this, the rest of all the files are configured in kdc.conf]
+[1. realm
+ 2. KDC
+ 3. Admin server]
+
+
+## Check kdc.conf for kdc configurations## [rest of the files configurations are present here]
+$ sudo nano /usr/share/doc/krb5-kdc/examples/kdc.conf
+
+Uncomment - supported enryption type (supported_enctypes)
+
+
+##restart kerberos admin server to make changes into effect##
+sudo /etc/init.d/krb5-admin-server restart
+
+
+##connecting to kdc##
+$ sudo kadmin.local
+[it will connect to localhost (loopback)]
+
+
+##adding principal##
+addprinc <principal-name> ex.cm/admin
+
+$ exit
+
+
+##giving admin privilages to cm/admin##
+sudo nano /etc/krb5kdc/kadm5.acl
+
+--*copy and paste the below line as it is*--
+cm/admin@HADOOP.COM <1 tab space (8 characters)> *
+
+
+##restart kerberos##
+sudo /etc/init.d/krb5-admin-server restart
+
+
+sudo kadmin.local
+
+addprinc user1
+[give dns of]
+
+
+
+## Install on all other instances ##
+## Install kerberos clients ##
+
+sudo apt-get install krb5-user -y
+
+
+## From Cloudera Manager console##
+## Select aes256-cts as algorithm type ## [cloudera manager> admisistration> security> kerberos]
+
+
+
+## Create a principal for hdfs superuser ##
+
+## CM instance terminal##
+sudo kadmin.local
+
+addprinc hdfs@HADOOP.com
+
+
+
+## Create principal for other users (options) ##
+
+addprinc usera
+
+addprinc userb
+
+addprinc user2
+
+addprinc userc
+
+
+## Creating and using keytab files ##
+
+--* Create principal and its keytab *--
+[from CM instance]
+$ sudo kadmin.local
+  addprinc user2
+
+## crating keytab ##
+xst -kt /tmp/user2.keytab user2@HADOOP.COM
+
+--*Sendind key.pem from downloads to CM*--
+$ scp -i key.pem key.pem ubuntu@<cm-private-dns>:~
+
+
+[sending keytab from CM to worker]
+--*changing keytab permission*--
+$ sudo chmod a+r /tmp/user2.keytab [a+r - all + read]
+
+
+--*changing key.pem permission to 600 before sending--*
+$ sudo chmod 600 key.pem
+
+--* Send keytab files to user *--
+$ scp -i key.pem /tmp/user2.keytab ubuntu@<worker-private-dns>:~
+
+
+--{switch to worker node}
+
+--* Authenticate using keytab *--
+
+$ chmod 600 user2.keytab
+
+$ kinit -kt user1.keytab user1
+
+[to check TGT]
+$ klist
+
+
+##################################################################################
+## Kerberos Commands ##
+
+---> Adding principal
+
+addprinc prinname
+
+
+---> Deleting Principal
+
+delprinc princname
+
+
+----> Listing all principals
+
+listprincs
+
+
+----> Getting information about a particular principal
+
+getprinc princname
+
+
+---> Change password for particular principal
+
+cpw princname
+####################################################################################
+
+
